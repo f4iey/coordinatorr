@@ -24,7 +24,7 @@ RUN php artisan key:generate
 RUN sed -i "s/DB_CONNECTION=mysql/DB_CONNECTION=sqlite/" .env
 RUN sed -i "s/DB_DATABASE=laravel/DB_DATABASE=database.sqlite/" .env
 RUN touch /var/www/html/database/database.sqlite
-VOLUME /var/www/html/database
+#VOLUME /var/www/html/database
 
 # Prepare database
 RUN php artisan migrate
