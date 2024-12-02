@@ -17,6 +17,7 @@ RUN curl -sS https://getcomposer.org/installer | php && \
     mv composer.phar /usr/local/bin/composer
 COPY . .
 RUN composer install --no-dev
+RUN composer require spatie/laravel-discord-alerts
 COPY .env.example .env
 RUN php artisan key:generate
 
