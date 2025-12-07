@@ -17,7 +17,7 @@ class PlannedActivationController extends Controller
         //get infos from database
         $callsigns = Callsign::where('hidden', false)->get();
         $planned_activations = PlannedActivation::orderBy('start')->with('callsign', 'activator')->get()->where('end', '>', \Carbon\Carbon::now());
-        $appmode = env('COORDINATORR_MODE', 'SINGLEOP');
+        $appmode = db4scw_get_current_appmode();
         $bands = Band::all();
         $modes = Mode::all();
 
@@ -28,7 +28,7 @@ class PlannedActivationController extends Controller
     public function add()
     {
         //get appmode
-        $appmode = env('COORDINATORR_MODE', 'SINGLEOP');
+        $appmode = db4scw_get_current_appmode();
 
         //check if Appmode is valid
         if(Appmode::where('option', $appmode)->count() < 1) {
@@ -80,7 +80,7 @@ class PlannedActivationController extends Controller
 
         //handle fail of validation
         if ($validator->fails()) {
-            return redirect()->route('planned_activations')->with('danger', skd_validatorerrors($validator))->withInput();
+            return redirect()->route('planned_activations')->with('danger', db4scw_validatorerrors($validator))->withInput();
         }
 
         //get validated fields
@@ -134,5 +134,85 @@ class PlannedActivationController extends Controller
         
         //redirect back to list
         return redirect()->route('planned_activations')->with('success', 'Activation deleted successfully.');
+    }
+
+    public function removemodal()
+    {
+        //validate input
+        $validator = \Illuminate\Support\Facades\Validator::make(request()->all(), [
+            'plannedactivationId' => 'required|exists:planned_activations,id'
+        ], 
+        [
+            'plannedactivationId.exists' => 'This planned activation does not exist.'
+        ]);
+
+        //handle fail of validation
+        if ($validator->fails()) {
+            return redirect()->back()->with('danger', db4scw_validatorerrors($validator))->withInput();
+        }
+
+        //get validated fields
+        $attributes = $validator->validated();
+
+        //find activation
+        $plannedactivation = PlannedActivation::find($attributes['plannedactivationId']);
+
+        //call get route
+        return $this->remove($plannedactivation);
+    }
+
+    public function export_for_calendar()
+    {
+
+        //get appmode
+        $appmode = db4scw_get_current_appmode();
+
+        //get request
+        $arguments = request()->all();
+        
+        //get all planned activations
+        $planned_activations = PlannedActivation::orderBy('start')->with('callsign', 'activator');
+
+        //parse request data and narrow down data loading
+        if(array_key_exists('start', $arguments) and array_key_exists('end', $arguments))
+        {
+            $start = \Carbon\Carbon::parse( substr($arguments['start'], 0, 10));
+            $end = \Carbon\Carbon::parse( substr($arguments['end'], 0, 10));
+            $planned_activations = $planned_activations->where('start', '>=', $start);
+            $planned_activations = $planned_activations->where('end', '<=', $end);
+        }
+
+        //get data from database
+        $planned_activations = $planned_activations->where('end', '>', \Carbon\Carbon::now())->get();
+
+        //check if we have more than 1 callsign possible
+        $possiblecalls = Callsign::where('hidden', false)->count();
+
+        //decide if the callsign should be exported as the calendar title
+        $withcallsign = false;
+
+        if($possiblecalls != 1)
+        {
+            $withcallsign = true;
+        }
+
+        //safety-check if there are more than 1 call in the existing planned activations
+        if($planned_activations->pluck('callsign.call')->unique()->count() != 1)
+        {
+            $withcallsign = true;
+        }
+
+        //get calendar format for FullCalendar
+        $calendarData = $planned_activations->map(function ($planned_activation) use($withcallsign, $appmode) {
+            return $planned_activation->getcalendarformat($withcallsign, $appmode);
+        });
+
+        //get json data and return 
+        return response()->json(array_values($calendarData->toArray()));
+    }
+
+    public function showcalendar()
+    {
+        return view('calendar', []);
     }
 }

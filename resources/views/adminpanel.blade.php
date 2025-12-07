@@ -1,8 +1,8 @@
 <x-layout>
-    <x-slot name="title">DB4SCW Eventcoordination Adminpanel</x-slot>
+    <x-slot name="title">Coordinatorr Adminpanel</x-slot>
 
     <x-slot name="slot">
-        <div class="container mt-5">
+        <div class="container mt-5" style="margin-top: 50px;">
             <form action="/admin/add_activator" method="post">
                 @csrf
                 <div class="form-group">
@@ -35,12 +35,12 @@
                         <label for="mode" style="color:red;">DANGER: Changing this will delete all current activations and upcoming planned activations!</label>
                         <select class="form-control" name="mode">
                             @foreach ($modes as $mode)
-                            <option value="{{ $mode->option }}" {{ env('COORDINATORR_MODE', 'SINGLEOP') == $mode->option ? 'selected' : '' }}>{{ $mode->option }} -> {{ $mode->description }}</option>
+                            <option value="{{ $mode->option }}" {{ $current_appmode == $mode->option ? 'selected' : '' }}>{{ $mode->option }} -> {{ $mode->description }}</option>    
                             @endforeach
                         </select>
                     </div>
                     <div class="text-center">
-                        <input type="submit" class="btn btn-primary" value="Change Coordinatorr mode">
+                        <input type="submit" class="btn btn-primary" value="Change coordinatorr mode">
                     </div>
                 </form>
             </div>

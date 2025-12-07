@@ -17,7 +17,7 @@ class ActivationController extends Controller
         //get infos from database
         $callsigns = Callsign::where('hidden', false)->get();
         $current_activations = Activation::where('end', null)->with('callsign', 'activator')->get();
-        $appmode = env('COORDINATORR_MODE', 'SINGLEOP');
+        $appmode = db4scw_get_current_appmode();
         $bands = Band::all();
         $modes = Mode::all();
 
@@ -29,7 +29,7 @@ class ActivationController extends Controller
     public function add()
     {
         //get appmode
-        $appmode = env('COORDINATORR_MODE', 'SINGLEOP');
+        $appmode = db4scw_get_current_appmode();
 
         //check if Appmode is valid
         if(Appmode::where('option', $appmode)->count() < 1) {
@@ -74,7 +74,7 @@ class ActivationController extends Controller
 
         //handle fail of validation
         if ($validator->fails()) {
-            return redirect()->route('home')->with('danger', skd_validatorerrors($validator));
+            return redirect()->route('home')->with('danger', db4scw_validatorerrors($validator));
         }
 
         //validierte Felder abholen
@@ -115,7 +115,7 @@ class ActivationController extends Controller
         }
 
         //Check if there are planned activations for that callsign and check, if activator is in this
-        $reservations = $callsign->plannedactivations->where('start', '<=', \Carbon\Carbon::now())->where('end', '>=', \Carbon\Carbon::now());
+        $reservations = $callsign->plannedactivations()->where('start', '<=', \Carbon\Carbon::now())->where('end', '>=', \Carbon\Carbon::now());
 
         //add constrictions based on appmode
         $reservations = db4scw_add_mode_constrictions($reservations, $appmode, $bandid, $modeid);
@@ -144,7 +144,7 @@ class ActivationController extends Controller
         $future_reservations = db4scw_add_mode_constrictions($future_reservations, $appmode, $bandid, $modeid);
 
         //check if there are other activations up to 4 hours in the future where this activator is not the reserving activator
-        $future_reservations->get()->where('start', '<=', \Carbon\Carbon::now()->addHours(env("COORDINATORR_CHECK_RESERVATIONS_IN_ADVANCE_HOURS", 4)));
+        $future_reservations->get()->where('start', '<=', \Carbon\Carbon::now()->addHours(config('app.db4scw_check_reservations_advance_hours')));
 
         //decide which on-screen-message to display
         if($future_reservations->count() > 0)
@@ -176,5 +176,74 @@ class ActivationController extends Controller
         //redirect back to list
         return redirect()->route('home')->with('success', 'Activation ended successfully.');
 
+    }
+
+    public function endmodal() 
+    {
+        //validate input
+        $validator = \Illuminate\Support\Facades\Validator::make(request()->all(), [
+            'activationId' => 'required|exists:activations,id'
+        ], 
+        [
+            'activationId.exists' => 'This activation does not exist.'
+        ]);
+
+        //handle fail of validation
+        if ($validator->fails()) {
+            return redirect()->back()->with('danger', db4scw_validatorerrors($validator))->withInput();
+        }
+
+        //get validated fields
+        $attributes = $validator->validated();
+
+        //find activation
+        $activation = Activation::find($attributes['activationId']);
+
+        //call get route
+        return $this->end($activation);
+    }
+
+    public function showopen(){
+        
+        //get open activations without logs
+        $activations = Activation::orderBy('start')->where('log_received', null)->where('end', '!=', null)->with('callsign', 'activator')->get();
+
+        if($activations->count() < 1)
+        {
+            return redirect()->back()->with('success', 'No activations without logs found.');
+        }
+
+        //get appmode
+        $appmode = db4scw_get_current_appmode();
+        
+        //show view
+        return view('activationswithoutlogs', ['activations' => $activations, 'appmode' => $appmode ]);        
+    }
+
+    public function receivelog(Activation $activation)
+    {
+        
+        //check if log was already received
+        if($activation->log_received != null)
+        {
+            return redirect()->back()->with('success', 'Log was already received.');
+        }
+
+        //get open activations without logs
+        $activations = Activation::orderBy('start')->where('log_received', null)->where('end', '!=', null)->with('callsign', 'activator', 'band')->get();
+
+        //set logreceive-date
+        $activation->log_received = \Carbon\Carbon::now();
+        $activation->save();
+
+        //return redirect with success
+        if($activations->count() <= 1)
+        {
+            $redir = redirect()->route('adminpanel');
+        }else{
+            $redir = redirect()->route('activationswithoutlogs');
+        }
+        
+        return $redir->with('success', 'Logstatus successfully changed.');
     }
 }
