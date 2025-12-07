@@ -185,4 +185,38 @@ return [
         // 'Example' => App\Facades\Example::class,
     ])->toArray(),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Styling
+    |--------------------------------------------------------------------------
+    |
+    | This exposes the styling chosen in .env or the default values
+    |
+    */
+
+    'db4scw_page_background_color' => env('PAGE_BACKGROUND_COLOR', '#343a40'),
+    'db4scw_accent_background_color' => env('PAGE_ACCENT_COLOR', 'rgb(226, 126, 0)'),
+    'db4scw_table_background_color' => env('TABLE_ACCENT_COLOR', '#555e66'),
+    'db4scw_body_text_color' => env('BODY_TEXT_COLOR', '#f8f9fa'),
+    'db4scw_modal_header_background_color' => env('MODAL_HEADER_BACKGROUND_COLOR', '#333'),
+    'db4scw_modal_body_background_color' => env('MODAL_BODY_BACKGROUND_COLOR', '#212529'),
+    'db4scw_navbar_link_text_color' => env('NAVBAR_LINK_TEXT_COLOR', 'white'),
+    'db4scw_content_background_color' => env('CONTENT_BACKGROUND_COLOR', 'rgba(255, 255, 255, 0.5);'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | other coordinatorr environment variables
+    |--------------------------------------------------------------------------
+    |
+    | This exposes the coordinatorr specific environment variables as config entries
+    |
+    */
+
+    'db4scw_impressum_url' => env('APP_IMPRESSUM_URL', '/'),
+    'db4scw_data_protection_url' => env('APP_DATA_PROTECTION_URL', '/'),
+    'db4scw_coordinatorr_mode' => env('COORDINATORR_MODE', 'SINGLEOP'),
+    'db4scw_check_reservations_advance_hours' => env("COORDINATORR_CHECK_RESERVATIONS_IN_ADVANCE_HOURS", 4),
+    'db4scw_adminpanel_secret' => env('ADMIN_PANEL_SECRET', 'simsalabim'),
+    'db4scw_end_functions_javascript' => env('END_ACTIVATIONS_USE_JAVASCRIPT', false),
+
 ];

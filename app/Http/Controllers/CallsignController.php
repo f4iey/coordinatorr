@@ -34,7 +34,7 @@ class CallsignController extends Controller
         }
 
         //check if there are planned activations
-        $planned = $callsign->plannedactivations()->orderBy('start', 'desc')->first();
+        $planned = $callsign->plannedactivations()->where('end', '>', \Carbon\Carbon::now())->orderBy('start', 'desc')->first();
 
         //display planned activations
         if($planned != null)
@@ -83,16 +83,17 @@ class CallsignController extends Controller
 
         //handle fail of validation
         if ($validator->fails()) {
-            return redirect()->route('adminpanel')->with('danger', skd_validatorerrors($validator))->withInput();
+            return redirect()->route('adminpanel')->with('danger', db4scw_validatorerrors($validator))->withInput();
         }
 
         //get validated fields
         $attributes = $validator->validated();
 
         //create new activator
-        $activator = new Callsign();
-        $activator->call = $attributes['event_callsign'];
-        $activator->save();
+        $callsign = new Callsign();
+        $callsign->call = $attributes['event_callsign'];
+        $callsign->calendar_color = db4scw_get_new_distict_muted_color();
+        $callsign->save();
 
         //return back
         return redirect()->route('adminpanel')->with('success', 'Callsign successfully created.');
