@@ -1,6 +1,10 @@
 <?php
 
-function skd_validatorerrors(\Illuminate\Validation\Validator $validator) : string
+use App\Models\Appmode;
+use App\Models\Callsign;
+use Illuminate\Support\Facades\Http;
+
+function db4scw_validatorerrors(\Illuminate\Validation\Validator $validator) : string
 {
     return implode(" | ", $validator->errors()->all());
 }
@@ -34,39 +38,73 @@ function db4scw_add_mode_constrictions($input, $appmode, $bandid = null, $modeid
     return $input;
 }
 
-function db4scw_assure_appmode_in_env() : void
+function db4scw_assure_appmode() : void
 {
-    //define env key
-    $key = "COORDINATORR_MODE";
-    $value = "SINGLEOP";
-
-    //get environment file
-    $envFile = app()->environmentFilePath();
-    $envcontent = file_get_contents($envFile);
-
-    //check if key exists
-    $keyPosition = strpos($envcontent, "{$key}=");
-
-    // If key exists, replace it. Otherwise, add the new key-value pair.
-    if ($keyPosition !== false) 
+    //get appmode from database
+    $current_appmode = Appmode::where('active', true)->first();
+    
+    //if no appmode is set in database, set the default mode.
+    if($current_appmode == null)
     {
-        //do nothing
-        return;
-    } else {
-        $envcontent .= "\n{$key}={$value}";
+        $default_appmode = Appmode::where('option', 'SINGLEOP')->first();
+        $default_appmode->active = true;
+        $default_appmode->save();
+        $current_appmode = $default_appmode;
     }
+}
 
-    //write new env file
-    try 
+function db4scw_get_current_appmode()
+{
+    //get appmode from database
+    $current_appmode = Appmode::where('active', true)->first();
+
+    //return the option
+    return $current_appmode->option;
+}
+
+function db4scw_get_new_distict_muted_color() : string 
+{
+    //define some colors
+    $colors = [
+        "#4B4E6D",
+        "#5E6A71",
+        "#7A7265",
+        "#8C8377",
+        "#746A6D",
+        "#595E68",
+        "#6B7A78",
+        "#83786E",
+        "#4F5358",
+        "#6A6164",
+        "#5C6E6F",
+        "#76797A",
+        "#857D72",
+        "#7C6E75",
+        "#50555A",
+        "#697270",
+        "#7A847A",
+        "#645B5D",
+        "#586462",
+        "#73776D"
+    ];
+
+    //shuffle the array
+    shuffle($colors);
+
+    //get existing colors
+    $existing_colors = Callsign::where('calendar_color', '!=', null)->distinct()->select('calendar_color')->get()->pluck('calendar_color')->toArray();
+
+    //get remaining colors
+    $remaining_colors = array_diff($colors, $existing_colors);
+
+    //if we got remaining colors, use the first random one, else use the first random color from the whole list
+    if(count($remaining_colors) > 0)
     {
-        file_put_contents($envFile, $envcontent);
-    } catch (\Throwable $th) 
+        return $remaining_colors[0];
+    }else
     {
-        //nothing we can do here if that does not work...
+        return $colors[0];
     }
-
-    //close function
-    return;
 }
 
 function stalinsort(array $array, bool $reverse = false): array {
@@ -94,4 +132,61 @@ function stalinsort(array $array, bool $reverse = false): array {
 
     //return result, reverse if needed
     return $reverse ? array_reverse($sortedArray) : $sortedArray;
+}
+
+function db4scw_checklatestGithubRelease(string $owner, string $repo, string $currentversion)
+{
+
+    //calculate url
+    $url = "https://api.github.com/repos/{$owner}/{$repo}/releases/latest";
+
+    //hold latest data
+    $latest = null;
+
+    $req = Http::withHeaders([
+            'User-Agent'            => "{$repo}-updater",
+            'Accept'                => 'application/vnd.github+json',
+            'X-GitHub-Api-Version'  => '2022-11-28',
+        ])
+        ->timeout(2)          //short timeout: fail gently
+        ->connectTimeout(1.5) //fast connect fail
+        ->get($url);
+
+    //if not ok, fail silently: treat as "no info". If ok, load json response
+    if (!$req->ok()) {
+        $latest = null; 
+    }else{
+        $latest = $req->json();
+    }
+
+    //abort if no info
+    if (!$latest) {
+        return [
+            'isNewer'       => false,
+            'latestVersion' => $currentversion,
+            'htmlUrl'       => null,
+            'body'          => '',
+        ];
+    }
+
+    //get tag
+    $tag = $latest['tag_name'] ?? ($latest['name'] ?? '');
+    
+    //remove leading "v" or "v." (case-insensitive)
+    $latestVersion = preg_replace('/^v\.?/i', '', (string) $tag);
+
+    //clear current version as well
+    $current = preg_replace('/^v\.?/i', '', $currentversion);
+    
+    //check if newer
+    $isNewer = version_compare($latestVersion, $current, '>');
+
+    //return info
+    return [
+        'isNewer'       => $isNewer,
+        'latestVersion' => $tag,
+        'htmlUrl'       => $latest['html_url'] ?? null,
+        'body'          => $latest['body'] ?? ''
+    ];
+
 }

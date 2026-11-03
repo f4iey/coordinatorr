@@ -26,19 +26,23 @@ Route::get('/', [ActivationController::class, 'index'])->name('home');
 //Activation handling
 Route::post('/add_activation', [ActivationController::class, 'add'])->name('add');
 Route::get('/end_activation/{activation:id}', [ActivationController::class, 'end'])->name('end');
+Route::post('/end_activation', [ActivationController::class, 'endmodal'])->name('endmodal');
 
 //View planned activations
 Route::get('/planned_activations', [PlannedActivationController::class, 'index'])->name('planned_activations');
+Route::get('/planned_activations/calendar', [PlannedActivationController::class, 'showcalendar'])->name('show_calendar_view');
+Route::get('/planned_activations/export', [PlannedActivationController::class, 'export_for_calendar'])->name('show_calendar_view');
 
 //Planned activation handling
 Route::post('/add_planned_activation', [PlannedActivationController::class, 'add'])->name('add_planned_activation');
 Route::get('/planned_activation/{plannedactivation:id}/delete', [PlannedActivationController::class, 'remove'])->name('delete_planned_activation');
+Route::post('/planned_activation/delete', [PlannedActivationController::class, 'removemodal'])->name('delete_planned_activation_modal');
 
 //QRZ IFrame Integration
 Route::get('/status/{callsign:call}', [CallsignController::class, 'status'])->name('getstatus');
 
 //Login Route with token
-Route::get('/adminkey/' . urlencode(env('ADMIN_PANEL_SECRET', 'simsalabim')), [LoginController::class, 'login'])->name('loginwithtoken');
+Route::get('/adminkey/' . urlencode(config('app.db4scw_adminpanel_secret')), [LoginController::class, 'login'])->name('loginwithtoken');
 
 //dummy login route to redirect to home (necessary because of auth middleware)
 Route::get('/login', function() { return redirect('/'); })->name('login');
@@ -64,6 +68,10 @@ Route::middleware('auth')->group(function () {
 
     //Mode handling
     Route::post('/admin/switch_mode', [AdminpanelController::class, 'switchmode']);
+
+    //log handling
+    Route::get('/activations/open', [ActivationController::class, 'showopen'])->name('activationswithoutlogs');
+    Route::get('/activation/{activation:id}/logreceived', [ActivationController::class, 'receivelog']);
 
 });
 

@@ -14,13 +14,8 @@ class HamalertController extends Controller
     public function receive()
     {
         //get appmode
-        $appmode = env('COORDINATORR_MODE', 'SINGLEOP');
-
-        //check if Appmode is valid
-        if (Appmode::where('option', $appmode)->count() < 1) {
-            return response()->json(['message' => 'The mode of this coordinatorr instance is not configured well.'], 500);
-        }
-
+        $appmode = db4scw_get_current_appmode();
+        
         //get json from request
         $data = request()->json()->all();
 
@@ -37,7 +32,7 @@ class HamalertController extends Controller
 
         //extract data from hamalert spot
         $spotter = (string)$data['spotter'] ?? '';
-        $comment = (string)$data['comment'] ?? '';
+        $comment = (string)($data['comments'] ?? 'No comment provided');
         $band = (string)$data['band'];
         $frequency = (float)$data['frequency'];
         $mode = strtoupper((string)$data['modeDetail']);

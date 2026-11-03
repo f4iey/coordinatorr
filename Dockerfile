@@ -1,5 +1,5 @@
 # Use the official Apache image as a base
-FROM php:8.3.36-apache
+FROM php:8.4.27-apache
 
 WORKDIR /var/www/html
 
@@ -17,6 +17,7 @@ RUN curl -sS https://getcomposer.org/installer | php && \
     mv composer.phar /usr/local/bin/composer
 COPY . .
 RUN composer install --no-dev
+RUN composer require spatie/laravel-discord-alerts
 COPY .env.example .env
 RUN php artisan key:generate
 
@@ -24,7 +25,7 @@ RUN php artisan key:generate
 RUN sed -i "s/DB_CONNECTION=mysql/DB_CONNECTION=sqlite/" .env
 RUN sed -i "s/DB_DATABASE=laravel/DB_DATABASE=database.sqlite/" .env
 RUN touch /var/www/html/database/database.sqlite
-VOLUME /var/www/html/database
+#VOLUME /var/www/html/database
 
 # Prepare database
 RUN php artisan migrate
