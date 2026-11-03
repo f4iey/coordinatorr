@@ -3359,7 +3359,6 @@
             "time": "2025-12-14T04:43:48+00:00"
         },
         {
-<<<<<<< HEAD
             "name": "spatie/laravel-discord-alerts",
             "version": "1.5.0",
             "source": {
